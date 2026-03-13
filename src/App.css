@@ -1156,7 +1156,10 @@ button, input { font-family: inherit; }
     padding-bottom: 0;
   }
   .projector-sections-pane { justify-content: flex-start; }
-  .projector-topics-pane { align-items: stretch; }
+  .projector-topics-pane {
+    align-items: stretch;
+    padding-bottom: var(--screen-closed-height);
+  }
   .projector-sections {
     width: 100%;
     max-width: 100%;
@@ -1178,6 +1181,10 @@ button, input { font-family: inherit; }
     min-height: 0;
   }
 
+  .projector-topic-stage::after {
+    bottom: -3px;
+  }
+
   .projector-topic-morph {
     height: 100%;
     min-height: 0;
@@ -1188,7 +1195,7 @@ button, input { font-family: inherit; }
   }
 
   .projector-topic-heading {
-    margin-top: 0.35rem;
+    margin-top: 0.85rem;
   }
 
   .projector-topic-grid {
@@ -1205,7 +1212,7 @@ button, input { font-family: inherit; }
   .content-grid, .course-layout, .resume-grid { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 1280px) {
+@media (min-width: 901px) and (max-width: 1280px) {
   .projector-topic-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
