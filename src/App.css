@@ -335,7 +335,7 @@ button, input { font-family: inherit; }
   top: var(--projector-line-inset-top);
   bottom: var(--projector-line-inset-bottom);
   left: calc(var(--projector-sections-col-width) + (var(--projector-column-gap) / 2));
-  width: 1.5px;
+  width: 1px;
   background: var(--line);
   pointer-events: none;
 }
@@ -1142,35 +1142,59 @@ button, input { font-family: inherit; }
 
   .projector-body-inner {
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto;
+    grid-template-rows: auto minmax(0, 1fr);
     align-content: start;
     gap: 0.75rem;
   }
   .projector-body-inner::after { display: none; }
   .projector-sections-pane,
   .projector-topics-pane {
-    height: auto;
+    height: 100%;
+    min-height: 0;
     align-items: flex-start;
     padding-top: 0;
     padding-bottom: 0;
   }
   .projector-sections-pane { justify-content: flex-start; }
+  .projector-topics-pane { align-items: stretch; }
   .projector-sections {
     width: 100%;
     max-width: 100%;
     min-width: 0;
   }
-  .projector-sections ul { gap: 0.32rem; }
-  .projector-section-trigger { font-size: clamp(0.95rem, 5vw, 1.6rem); }
+  .projector-sections ul {
+    gap: 0.32rem;
+    margin-top: 0.4rem;
+    padding-bottom: 0.3rem;
+  }
+  .projector-section-trigger { font-size: clamp(1.35rem, 7.2vw, 2.4rem); }
 
   .projector-topic-stage {
     border-left: 0;
-    border-top: 2px solid var(--line);
+    border-top: 0;
     padding-left: 0;
-    padding-top: 0.75rem;
+    padding-top: 0.25rem;
+    height: 100%;
+    min-height: 0;
   }
 
-  .projector-topic-grid { grid-template-columns: 1fr; padding-right: 0; }
+  .projector-topic-morph {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .projector-topic-layer {
+    padding-top: 0.25rem;
+  }
+
+  .projector-topic-heading {
+    margin-top: 0.35rem;
+  }
+
+  .projector-topic-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-right: 0;
+  }
   .projector-rope { right: 2.4rem; height: 3.8rem; }
   .topbar { grid-template-columns: 1fr; justify-items: start; }
   .top-menu { display: none; }
