@@ -11,12 +11,14 @@ export const PROJECTOR_SECTIONS = [
 export const PROJECTOR_TOPICS = {
   Fundamentals: [
     {
-      topic: "Orientation",
+      topic: "Intelligent Systems",
       subtopics: [
-        "What Really Is Machine Learning?",
-        "AI vs ML vs DL",
+        "What Is Machine Learning",
+        "AI vs ML vs Deep Learning",
         "Types of Learning Problems",
-        "Where Machine Learning Is Used Today",
+        "How Models Learn",
+        "The ML Workflow",
+        "Where ML Is Used Today",
       ],
     },
     {
@@ -365,11 +367,13 @@ export const PROJECTOR_TOPICS = {
       ],
     },
     {
-      topic: "Multimodal & Vision-Language",
+      topic: "Multimodal Learning",
       subtopics: [
-        "VLM Backbones",
-        "Fusion Methods",
-        "Crossmodal Tasks",
+        "Vision-Language Backbones",
+        "Audio Representations",
+        "Cross-Modal Fusion",
+        "Cross-Modal Alignment",
+        "Multimodal Generation",
       ],
     },
     {
@@ -399,7 +403,7 @@ export const PROJECTOR_TOPICS = {
       ],
     },
     {
-      topic: "Frameworks & Tools",
+      topic: "ML Frameworks & Tools",
       subtopics: [
         "PyTorch Stack",
         "TensorFlow & JAX",
@@ -491,6 +495,16 @@ export const PROJECTOR_TOPICS = {
         "Tokenization & Structured NLP",
         "Generation & Summarization",
         "Inference Tasks & Metrics",
+      ],
+    },
+    {
+      topic: "Speech & Audio",
+      subtopics: [
+        "Audio Representations & Spectrograms",
+        "Speech Recognition",
+        "Text-to-Speech & Neural Vocoders",
+        "Audio Generation",
+        "Audio Understanding",
       ],
     },
     {

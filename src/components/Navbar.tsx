@@ -19,7 +19,6 @@ import "./Navbar.css";
 
 const OPEN_MS = 900;
 const CLOSE_MS = 680;
-const DRAG_THRESHOLD_PX = 26;
 const TOPIC_MORPH_TIME_MS = 820;
 const TOPIC_SLIDE_TIME_MS = 560;
 const MORPH_BLUR_BASE = 5;
@@ -126,7 +125,6 @@ function Navbar() {
   const initialRouteStatus = resolvePathStatus(initialPathname).status;
   const [topicTransitionMode] = useState(resolveTopicTransitionMode);
   const [screenPhase, setScreenPhase] = useState("closed");
-  const [isRopeGrabbed, setIsRopeGrabbed] = useState(false);
   const [selectedSection, setSelectedSection] = useState(PROJECTOR_SECTIONS[0]);
   const [hoveredSection, setHoveredSection] = useState(null);
   const [displayedSection, setDisplayedSection] = useState(PROJECTOR_SECTIONS[0]);
@@ -164,7 +162,6 @@ function Navbar() {
   const fromTextNodesRef = useRef([]);
   const toTextNodesRef = useRef([]);
   const screenPhaseRef = useRef("closed");
-  const ropeDragRef = useRef({ active: false, pointerId: null, startY: 0, acted: false });
   const subtopicReturnListenersRef = useRef(new WeakMap());
 
   const parseCssNumber = (value, fallback = 0) => {
@@ -687,30 +684,6 @@ function Navbar() {
     openProjectorScreen();
   };
 
-  const startRopeDrag = (event) => {
-    if (event.button !== 0) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
-    ropeDragRef.current = { active: true, pointerId: event.pointerId, startY: event.clientY, acted: false };
-    setIsRopeGrabbed(true);
-  };
-
-  const moveRopeDrag = (event) => {
-    const d = ropeDragRef.current;
-    if (!d.active || d.pointerId !== event.pointerId) return;
-    const deltaY = event.clientY - d.startY;
-    if (deltaY >= DRAG_THRESHOLD_PX && !isOpenLikeNow()) { d.acted = true; d.startY = event.clientY; openProjectorScreen(); return; }
-    if (deltaY <= -DRAG_THRESHOLD_PX && isOpenLikeNow()) { d.acted = true; d.startY = event.clientY; closeProjectorScreen(); }
-  };
-
-  const endRopeDrag = (event, allowTapToggle) => {
-    const d = ropeDragRef.current;
-    if (!d.active || d.pointerId !== event.pointerId) return;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-    ropeDragRef.current = { active: false, pointerId: null, startY: 0, acted: false };
-    setIsRopeGrabbed(false);
-    if (allowTapToggle && !d.acted && Math.abs(event.clientY - d.startY) < DRAG_THRESHOLD_PX) toggleProjectorScreen();
-  };
-
   const isSlideMorph = isMorphingTopics && topicTransitionMode === "slide";
   const isGooeyMorph = isMorphingTopics && topicTransitionMode === "gooey";
   const topicStageStyle = {
@@ -852,13 +825,9 @@ function Navbar() {
         </div>
 
         <button
-          className={`projector-rope${isRopeGrabbed ? " is-grabbed" : ""}`}
+          className="projector-rope"
           type="button"
-          onPointerDown={startRopeDrag}
-          onPointerMove={moveRopeDrag}
-          onPointerUp={(e) => endRopeDrag(e, true)}
-          onPointerCancel={(e) => endRopeDrag(e, false)}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleProjectorScreen(); } }}
+          onClick={toggleProjectorScreen}
           aria-pressed={isOpenLike}
           aria-label={isOpenLike ? "Roll up projector screen" : "Pull down projector screen"}
         >

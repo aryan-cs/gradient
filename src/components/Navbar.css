@@ -194,16 +194,15 @@ button, input { font-family: inherit; }
   right: clamp(3.5rem, 8vw, 6.5rem);
   width: 2px;
   height: 4.6rem;
-  background: var(--line);
-  transform-origin: top center;
-  animation: rope-sway 2.6s ease-in-out infinite;
   z-index: 50;
   border: 0;
   padding: 0;
-  background-color: var(--line);
+  background: var(--line);
   appearance: none;
-  cursor: grab;
-  touch-action: none;
+  cursor: pointer;
+  transform-origin: top center;
+  animation: rope-sway 2.6s ease-in-out infinite;
+  will-change: transform;
 }
 
 .projector-pull {
@@ -217,11 +216,6 @@ button, input { font-family: inherit; }
   background: var(--projector-pull-accent);
   box-shadow: 1.5px 1.5px 0 var(--line);
   transform: translate(-50%, -35%);
-}
-
-.projector-rope.is-grabbed {
-  animation-play-state: paused;
-  cursor: grabbing;
 }
 
 .projector-rope::after {
@@ -1448,7 +1442,10 @@ button, input { font-family: inherit; }
     grid-template-columns: repeat(2, minmax(0, 1fr));
     padding-right: 0;
   }
-  .projector-rope { right: 2.4rem; height: 3.8rem; }
+  .projector-rope {
+    right: 2.4rem;
+    height: 3.8rem;
+  }
   .topbar { grid-template-columns: 1fr; justify-items: start; }
   .top-menu { display: none; }
   .top-actions { width: 100%; justify-content: flex-end; }
