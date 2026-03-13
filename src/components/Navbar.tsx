@@ -6,6 +6,8 @@ import {
   buildLessonPath,
   parseLessonPath,
   findLessonBySlugs,
+  stripBasePath,
+  withBasePath,
 } from "../engine/lessonRouting";
 import HomePage from "../pages/HomePage";
 import PageNotFound from "../pages/PageNotFound";
@@ -32,7 +34,9 @@ const RESERVED_COMING_SOON_ROUTES = new Set([
 ]);
 
 function getPathSegments(pathname) {
-  return pathname
+  const relativePath = stripBasePath(pathname);
+
+  return relativePath
     .split("/")
     .filter(Boolean)
     .map((segment) => decodeURIComponent(segment));
@@ -396,7 +400,7 @@ function Navbar() {
   };
 
   const navigateHome = () => {
-    const nextPath = "/";
+    const nextPath = withBasePath("/");
     if (window.location.pathname !== nextPath) {
       window.history.pushState({}, "", nextPath);
     }
@@ -407,17 +411,18 @@ function Navbar() {
   };
 
   const navigateTopRoute = (routePath) => {
-    if (window.location.pathname !== routePath) {
-      window.history.pushState({}, "", routePath);
+    const nextPath = withBasePath(routePath);
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState({}, "", nextPath);
     }
-    syncStateFromPath(routePath);
+    syncStateFromPath(nextPath);
     if (isOpenLikeNow()) {
       closeProjectorScreen();
     }
   };
 
   const navigateAccount = () => {
-    const nextPath = "/account";
+    const nextPath = withBasePath("/account");
     if (window.location.pathname !== nextPath) {
       window.history.pushState({}, "", nextPath);
     }
