@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from "react";
-import { FaCircleUser, FaRegCircleUser } from "react-icons/fa6";
 import { PROJECTOR_SECTIONS, PROJECTOR_TOPICS } from "../engine/Lessons";
 import {
   SECTION_SLUGS,
@@ -10,10 +9,12 @@ import {
   withBasePath,
 } from "../engine/lessonRouting";
 import HomePage from "../pages/HomePage";
+import MissionPage from "../pages/MissionPage";
+import ContactPage from "../pages/ContactPage";
+import DonatePage from "../pages/DonatePage";
 import PageNotFound from "../pages/PageNotFound";
 import SectionNav from "./SectionNav";
 import TopicLayer from "./TopicLayer";
-import logoIcon from "../../assets/icons/logo.svg";
 import "./Navbar.css";
 
 const OPEN_MS = 900;
@@ -28,10 +29,21 @@ const TOPBAR_TEXT_LINKS = [
   { slug: "contact", label: "Contact" },
   { slug: "donate", label: "Donate" },
 ];
-const RESERVED_COMING_SOON_ROUTES = new Set([
-  "account",
-  ...TOPBAR_TEXT_LINKS.map((link) => link.slug),
+const TOP_ROUTE_STATUSES = {
+  mission: "mission",
+  contact: "contact",
+  donate: "donate",
+  account: "coming-soon",
+};
+const STACKABLE_ROUTE_STATUSES = new Set([
+  "home",
+  "mission",
+  "contact",
+  "donate",
+  "coming-soon",
+  "not-found",
 ]);
+const MAX_DEALT_CARDS = 18;
 
 function getPathSegments(pathname) {
   const relativePath = stripBasePath(pathname);
@@ -66,11 +78,14 @@ function resolvePathStatus(pathname) {
     return { status: "home", matchedLesson: null };
   }
 
-  if (
-    pathSegments.length === 1 &&
-    (SECTION_SLUGS.has(pathSegments[0]) || RESERVED_COMING_SOON_ROUTES.has(pathSegments[0]))
-  ) {
-    return { status: "coming-soon", matchedLesson: null };
+  if (pathSegments.length === 1) {
+    const [routeSlug] = pathSegments;
+    if (TOP_ROUTE_STATUSES[routeSlug]) {
+      return { status: TOP_ROUTE_STATUSES[routeSlug], matchedLesson: null };
+    }
+    if (SECTION_SLUGS.has(routeSlug)) {
+      return { status: "coming-soon", matchedLesson: null };
+    }
   }
 
   const parsedPath = parseLessonPath(pathname);
@@ -92,6 +107,8 @@ function resolvePathStatus(pathname) {
 }
 
 function Navbar() {
+  const initialPathname = typeof window === "undefined" ? "/" : window.location.pathname;
+  const initialRouteStatus = resolvePathStatus(initialPathname).status;
   const [screenPhase, setScreenPhase] = useState("closed");
   const [isRopeGrabbed, setIsRopeGrabbed] = useState(false);
   const [selectedSection, setSelectedSection] = useState(PROJECTOR_SECTIONS[0]);
@@ -101,14 +118,15 @@ function Navbar() {
   const [morphFromSection, setMorphFromSection] = useState(PROJECTOR_SECTIONS[0]);
   const [morphToSection, setMorphToSection] = useState(PROJECTOR_SECTIONS[0]);
   const [hoveredTopic, setHoveredTopic] = useState(null);
-  const [activePathname, setActivePathname] = useState(() => {
-    if (typeof window === "undefined") return "/";
-    return window.location.pathname;
-  });
-  const [routeStatus, setRouteStatus] = useState(() => {
-    if (typeof window === "undefined") return "home";
-    return resolvePathStatus(window.location.pathname).status;
-  });
+  const [activePathname, setActivePathname] = useState(initialPathname);
+  const [routeStatus, setRouteStatus] = useState(initialRouteStatus);
+  const [dealtCards, setDealtCards] = useState(() => [
+    {
+      id: 0,
+      status: initialRouteStatus,
+      path: stripBasePath(initialPathname) || "/",
+    },
+  ]);
 
   const timerRef = useRef(null);
   const morphFrameRef = useRef(null);
@@ -376,13 +394,30 @@ function Navbar() {
   const isOpenLike = screenPhase === "open" || screenPhase === "opening";
   const activeSection = hoveredSection ?? selectedSection;
   const activeTopic = hoveredTopic;
-  const isAccountRoute = isAccountPath(activePathname);
   const activePathSegments = getPathSegments(activePathname);
+  const isHomeRoute = activePathSegments.length === 0;
+  const isAccountRoute = isAccountPath(activePathname);
 
   const syncStateFromPath = (pathname) => {
     setActivePathname(pathname);
     const { status, matchedLesson } = resolvePathStatus(pathname);
     setRouteStatus(status);
+    if (STACKABLE_ROUTE_STATUSES.has(status)) {
+      const path = stripBasePath(pathname) || "/";
+      setDealtCards((currentCards) => {
+        const topCard = currentCards[currentCards.length - 1];
+        if (topCard && topCard.status === status && topCard.path === path) {
+          return currentCards;
+        }
+
+        const topId = topCard ? topCard.id : -1;
+        const nextCards = [
+          ...currentCards,
+          { id: topId + 1, status, path },
+        ];
+        return nextCards.slice(-MAX_DEALT_CARDS);
+      });
+    }
     return matchedLesson;
   };
 
@@ -627,11 +662,11 @@ function Navbar() {
         <div className="topbar-controls" aria-label="Global navigation">
           <button
             type="button"
-            className="topbar-icon-btn topbar-home-btn"
-            aria-label="Home"
+            className={`topbar-text-btn topbar-home-btn${isHomeRoute ? " is-active" : ""}`}
+            aria-pressed={isHomeRoute}
             onClick={navigateHome}
           >
-            <img src={logoIcon} alt="" aria-hidden="true" className="topbar-home-icon" />
+            Home
           </button>
 
           <div className="topbar-link-group" role="group" aria-label="Primary links">
@@ -654,15 +689,11 @@ function Navbar() {
 
           <button
             type="button"
-            className={`topbar-icon-btn topbar-profile-btn${isAccountRoute ? " is-active" : ""}`}
-            aria-label="Profile"
+            className={`topbar-text-btn topbar-account-btn${isAccountRoute ? " is-active" : ""}`}
             aria-pressed={isAccountRoute}
             onClick={navigateAccount}
           >
-            <span className="topbar-profile-icon-stack" aria-hidden="true">
-              <FaRegCircleUser className="topbar-profile-icon topbar-profile-icon--outline" />
-              <FaCircleUser className="topbar-profile-icon topbar-profile-icon--filled" />
-            </span>
+            Account
           </button>
         </div>
 
@@ -755,10 +786,22 @@ function Navbar() {
         </button>
       </header>
 
-      {routeStatus === "home" ? <HomePage /> : null}
-      {routeStatus === "coming-soon" || routeStatus === "not-found" ? (
-        <PageNotFound isComingSoon={routeStatus === "coming-soon"} />
-      ) : null}
+      <div className="info-card-deck">
+        {dealtCards.map((card, index) => (
+          <div key={card.id} className="info-card-deck-layer" style={{ zIndex: index + 1 }}>
+            {card.status === "home" && <HomePage dealIndex={card.id} />}
+            {card.status === "mission" && <MissionPage dealIndex={card.id} />}
+            {card.status === "contact" && <ContactPage dealIndex={card.id} />}
+            {card.status === "donate" && <DonatePage dealIndex={card.id} />}
+            {card.status !== "home" &&
+              card.status !== "mission" &&
+              card.status !== "contact" &&
+              card.status !== "donate" && (
+                <PageNotFound isComingSoon={card.status === "coming-soon"} dealIndex={card.id} />
+              )}
+          </div>
+        ))}
+      </div>
 
       {/* SVG threshold filter — the secret ingredient of the Valgo gooey morph.
           Individual text nodes are blurred, then this filter snaps alpha edges. */}
