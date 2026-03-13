@@ -21,6 +21,7 @@ const OPEN_MS = 900;
 const CLOSE_MS = 680;
 const DRAG_THRESHOLD_PX = 26;
 const TOPIC_MORPH_TIME_MS = 820;
+const TOPIC_SLIDE_TIME_MS = 560;
 const MORPH_BLUR_BASE = 5;
 const MORPH_MAX_BLUR_PX = 22;
 const MORPH_OPACITY_EXPONENT = 0.1;
@@ -44,6 +45,20 @@ const STACKABLE_ROUTE_STATUSES = new Set([
   "not-found",
 ]);
 const MAX_DEALT_CARDS = 18;
+
+function resolveTopicTransitionMode() {
+  if (typeof window === "undefined") {
+    return "gooey";
+  }
+
+  const { userAgent, vendor = "" } = window.navigator;
+  const isSafari =
+    /Safari/i.test(userAgent) &&
+    /Apple/i.test(vendor) &&
+    !/Chrome|Chromium|CriOS|EdgiOS|FxiOS|OPiOS|DuckDuckGo/i.test(userAgent);
+
+  return isSafari ? "slide" : "gooey";
+}
 
 function getPathSegments(pathname) {
   const relativePath = stripBasePath(pathname);
@@ -109,6 +124,7 @@ function resolvePathStatus(pathname) {
 function Navbar() {
   const initialPathname = typeof window === "undefined" ? "/" : window.location.pathname;
   const initialRouteStatus = resolvePathStatus(initialPathname).status;
+  const [topicTransitionMode] = useState(resolveTopicTransitionMode);
   const [screenPhase, setScreenPhase] = useState("closed");
   const [isRopeGrabbed, setIsRopeGrabbed] = useState(false);
   const [selectedSection, setSelectedSection] = useState(PROJECTOR_SECTIONS[0]);
@@ -117,6 +133,7 @@ function Navbar() {
   const [isMorphingTopics, setIsMorphingTopics] = useState(false);
   const [morphFromSection, setMorphFromSection] = useState(PROJECTOR_SECTIONS[0]);
   const [morphToSection, setMorphToSection] = useState(PROJECTOR_SECTIONS[0]);
+  const [topicSlideDirection, setTopicSlideDirection] = useState(1);
   const [hoveredTopic, setHoveredTopic] = useState(null);
   const [activePathname, setActivePathname] = useState(initialPathname);
   const [routeStatus, setRouteStatus] = useState(initialRouteStatus);
@@ -130,6 +147,7 @@ function Navbar() {
 
   const timerRef = useRef(null);
   const morphFrameRef = useRef(null);
+  const morphTimerRef = useRef(null);
   const morphStartRef = useRef(0);
   const displayedSectionRef = useRef(PROJECTOR_SECTIONS[0]);
   const morphTargetSectionRef = useRef(PROJECTOR_SECTIONS[0]);
@@ -176,6 +194,47 @@ function Navbar() {
     }
   };
 
+  const syncSubtopicOverflowState = (item) => {
+    if (!item) return false;
+
+    const viewport = item.querySelector(".projector-subtopic-viewport");
+    const measureText = item.querySelector(".projector-subtopic-measure");
+    const primaryText = item.querySelector(".projector-subtopic-text--primary");
+    if (!viewport) return false;
+
+    const measuredWidth = Math.max(
+      Math.ceil(measureText?.getBoundingClientRect().width ?? 0),
+      Math.ceil(measureText?.scrollWidth ?? 0),
+      Math.ceil(primaryText?.scrollWidth ?? 0)
+    );
+    const viewportWidth = Math.ceil(
+      viewport.getBoundingClientRect().width || viewport.clientWidth || 0
+    );
+    const overflowPx = measuredWidth - viewportWidth;
+
+    if (overflowPx > 1) {
+      item.classList.add("is-overflowing");
+      const panGapPx = 26;
+      const loopDistancePx = measuredWidth + panGapPx;
+      item.style.setProperty("--subtopic-pan-gap", `${panGapPx}px`);
+      item.style.setProperty("--subtopic-pan-loop-distance", `${loopDistancePx}px`);
+      const durationMs = Math.min(Math.max(loopDistancePx * 22, 2400), 12000);
+      item.style.setProperty("--subtopic-pan-duration", `${durationMs}ms`);
+      return true;
+    }
+
+    clearSubtopicReturnTimeout(item);
+    item.classList.remove("is-overflowing");
+    item.classList.remove("is-panning");
+    item.classList.remove("is-returning");
+    item.style.removeProperty("--subtopic-pan-gap");
+    item.style.removeProperty("--subtopic-pan-loop-distance");
+    item.style.removeProperty("--subtopic-pan-duration");
+    item.style.removeProperty("--subtopic-pan-delay");
+    item.style.removeProperty("--subtopic-return-duration");
+    return false;
+  };
+
   const clearSubtopicReturnTimeout = (item) => {
     if (!item) return;
 
@@ -216,7 +275,7 @@ function Navbar() {
   };
 
   const startSubtopicPan = (item) => {
-    if (!item?.classList.contains("is-overflowing")) return;
+    if (!syncSubtopicOverflowState(item)) return;
     const track = item.querySelector(".projector-subtopic-track");
     if (!track) return;
 
@@ -299,8 +358,16 @@ function Navbar() {
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
   };
 
+  const clearMorphTimer = () => {
+    if (morphTimerRef.current) {
+      clearTimeout(morphTimerRef.current);
+      morphTimerRef.current = null;
+    }
+  };
+
   useEffect(() => () => {
     clearPhaseTimer();
+    clearMorphTimer();
     if (morphFrameRef.current) { cancelAnimationFrame(morphFrameRef.current); morphFrameRef.current = null; }
     fromTextNodesRef.current = [];
     toTextNodesRef.current = [];
@@ -330,32 +397,7 @@ function Navbar() {
 
       const subtopicItems = stage.querySelectorAll(".projector-subtopic-item");
       subtopicItems.forEach((item) => {
-        const viewport = item.querySelector(".projector-subtopic-viewport");
-        const primaryText = item.querySelector(".projector-subtopic-text--primary");
-        if (!viewport || !primaryText) return;
-
-        const textWidth = Math.ceil(primaryText.scrollWidth);
-        const overflowPx = Math.ceil(textWidth - viewport.clientWidth);
-        if (overflowPx > 2) {
-          item.classList.add("is-overflowing");
-          const panGapPx = 26;
-          const loopDistancePx = textWidth + panGapPx;
-          item.style.setProperty("--subtopic-pan-gap", `${panGapPx}px`);
-          item.style.setProperty("--subtopic-pan-loop-distance", `${loopDistancePx}px`);
-          const durationMs = Math.min(Math.max(loopDistancePx * 22, 2400), 12000);
-          item.style.setProperty("--subtopic-pan-duration", `${durationMs}ms`);
-          return;
-        }
-
-        clearSubtopicReturnTimeout(item);
-        item.classList.remove("is-overflowing");
-        item.classList.remove("is-panning");
-        item.classList.remove("is-returning");
-        item.style.removeProperty("--subtopic-pan-gap");
-        item.style.removeProperty("--subtopic-pan-loop-distance");
-        item.style.removeProperty("--subtopic-pan-duration");
-        item.style.removeProperty("--subtopic-pan-delay");
-        item.style.removeProperty("--subtopic-return-duration");
+        syncSubtopicOverflowState(item);
       });
     };
 
@@ -543,14 +585,31 @@ function Navbar() {
       morphStateRef.current = { status: "idle", from: toSection, to: toSection };
       return;
     }
+    clearMorphTimer();
     if (morphFrameRef.current) { cancelAnimationFrame(morphFrameRef.current); morphFrameRef.current = null; }
 
+    const fromIndex = PROJECTOR_SECTIONS.indexOf(fromSection);
+    const toIndex = PROJECTOR_SECTIONS.indexOf(toSection);
+    setTopicSlideDirection(toIndex >= fromIndex ? 1 : -1);
     morphStateRef.current = { status: "morphing", from: fromSection, to: toSection };
     setMorphFromSection(fromSection);
     setMorphToSection(toSection);
     setIsMorphingTopics(true);
     isMorphingTopicsRef.current = true;
     morphStartRef.current = 0;
+
+    if (topicTransitionMode === "slide") {
+      morphTimerRef.current = setTimeout(() => {
+        morphTimerRef.current = null;
+        setDisplayedSection(toSection); displayedSectionRef.current = toSection;
+        setIsMorphingTopics(false); isMorphingTopicsRef.current = false;
+        morphStateRef.current = { status: "idle", from: toSection, to: toSection };
+
+        const queued = morphTargetSectionRef.current;
+        if (queued !== toSection) beginTopicMorph(toSection, queued);
+      }, TOPIC_SLIDE_TIME_MS);
+      return;
+    }
 
     const waitForMorphLayers = () => {
       if (!seedMorphNodeStyles()) {
@@ -652,6 +711,12 @@ function Navbar() {
     if (allowTapToggle && !d.acted && Math.abs(event.clientY - d.startY) < DRAG_THRESHOLD_PX) toggleProjectorScreen();
   };
 
+  const isSlideMorph = isMorphingTopics && topicTransitionMode === "slide";
+  const isGooeyMorph = isMorphingTopics && topicTransitionMode === "gooey";
+  const topicStageStyle = {
+    "--projector-topic-slide-direction": topicSlideDirection,
+  };
+
   return (
     <div className={`app-shell${routeStatus !== "app" ? " app-shell--status" : ""}`}>
       {isOpenLike ? (
@@ -712,59 +777,74 @@ function Navbar() {
 
             <div className="projector-topics-pane">
               <section
-                className={`projector-topic-stage${isMorphingTopics ? " is-morphing" : ""}`}
+                className={`projector-topic-stage${isMorphingTopics ? " is-morphing" : ""}${
+                  isSlideMorph ? " is-slide-morph" : ""
+                }${isGooeyMorph ? " is-gooey-morph" : ""}`}
                 aria-label={`${displayedSection} topics`}
                 ref={topicStageRef}
+                style={topicStageStyle}
               >
                 {/*
-                  The SVG threshold filter is applied to the morph wrapper via CSS.
                   JS blurs/fades the old/new full content layers (Valgo technique).
+                  CSS applies the SVG threshold on an outer shell and a light blur on
+                  the inner wrapper so Safari does not have to chain both filters on
+                  the same element.
                 */}
-                <div className={`projector-topic-morph${isMorphingTopics ? " is-morphing" : ""}`}>
-                  {isMorphingTopics ? (
-                    <>
+                <div
+                  className={`projector-topic-morph-shell${isGooeyMorph ? " is-morphing" : ""}${
+                    isSlideMorph ? " is-slide-morph" : ""
+                  }`}
+                >
+                  <div
+                    className={`projector-topic-morph${isGooeyMorph ? " is-morphing" : ""}${
+                      isSlideMorph ? " is-slide-morph" : ""
+                    }`}
+                  >
+                    {isMorphingTopics ? (
+                      <>
+                        <TopicLayer
+                          section={morphFromSection}
+                          topicEntries={PROJECTOR_TOPICS[morphFromSection] ?? []}
+                          activeTopic={activeTopic}
+                          layerClassName="projector-topic-layer--from"
+                          layerRef={morphFromLayerRef}
+                          layerKey={`from-${morphFromSection}`}
+                          onTopicEnter={setHoveredTopic}
+                          onTopicLeave={() => setHoveredTopic(null)}
+                          onSubtopicEnter={startSubtopicPan}
+                          onSubtopicLeave={stopSubtopicPan}
+                          onSubtopicActivate={navigateToSubtopicRoute}
+                        />
+                        <TopicLayer
+                          section={morphToSection}
+                          topicEntries={PROJECTOR_TOPICS[morphToSection] ?? []}
+                          activeTopic={activeTopic}
+                          layerClassName="projector-topic-layer--to"
+                          layerRef={morphToLayerRef}
+                          layerKey={`to-${morphToSection}`}
+                          onTopicEnter={setHoveredTopic}
+                          onTopicLeave={() => setHoveredTopic(null)}
+                          onSubtopicEnter={startSubtopicPan}
+                          onSubtopicLeave={stopSubtopicPan}
+                          onSubtopicActivate={navigateToSubtopicRoute}
+                        />
+                      </>
+                    ) : (
                       <TopicLayer
-                        section={morphFromSection}
-                        topicEntries={PROJECTOR_TOPICS[morphFromSection] ?? []}
+                        section={displayedSection}
+                        topicEntries={PROJECTOR_TOPICS[displayedSection] ?? []}
                         activeTopic={activeTopic}
-                        layerClassName="projector-topic-layer--from"
-                        layerRef={morphFromLayerRef}
-                        layerKey={`from-${morphFromSection}`}
+                        layerClassName="projector-topic-layer--current"
+                        layerRef={null}
+                        layerKey={`current-${displayedSection}`}
                         onTopicEnter={setHoveredTopic}
                         onTopicLeave={() => setHoveredTopic(null)}
                         onSubtopicEnter={startSubtopicPan}
                         onSubtopicLeave={stopSubtopicPan}
                         onSubtopicActivate={navigateToSubtopicRoute}
                       />
-                      <TopicLayer
-                        section={morphToSection}
-                        topicEntries={PROJECTOR_TOPICS[morphToSection] ?? []}
-                        activeTopic={activeTopic}
-                        layerClassName="projector-topic-layer--to"
-                        layerRef={morphToLayerRef}
-                        layerKey={`to-${morphToSection}`}
-                        onTopicEnter={setHoveredTopic}
-                        onTopicLeave={() => setHoveredTopic(null)}
-                        onSubtopicEnter={startSubtopicPan}
-                        onSubtopicLeave={stopSubtopicPan}
-                        onSubtopicActivate={navigateToSubtopicRoute}
-                      />
-                    </>
-                  ) : (
-                    <TopicLayer
-                      section={displayedSection}
-                      topicEntries={PROJECTOR_TOPICS[displayedSection] ?? []}
-                      activeTopic={activeTopic}
-                      layerClassName="projector-topic-layer--current"
-                      layerRef={null}
-                      layerKey={`current-${displayedSection}`}
-                      onTopicEnter={setHoveredTopic}
-                      onTopicLeave={() => setHoveredTopic(null)}
-                      onSubtopicEnter={startSubtopicPan}
-                      onSubtopicLeave={stopSubtopicPan}
-                      onSubtopicActivate={navigateToSubtopicRoute}
-                    />
-                  )}
+                    )}
+                  </div>
                 </div>
               </section>
             </div>

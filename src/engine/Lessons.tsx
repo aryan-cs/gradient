@@ -11,9 +11,9 @@ export const PROJECTOR_SECTIONS = [
 export const PROJECTOR_TOPICS = {
   Fundamentals: [
     {
-      topic: "Intelligent Systems",
+      topic: "Orientation",
       subtopics: [
-        "What Is Machine Learning?",
+        "What Really Is Machine Learning?",
         "AI vs ML vs DL",
         "Types of Learning Problems",
         "Where Machine Learning Is Used Today",

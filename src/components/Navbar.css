@@ -541,7 +541,19 @@ button, input { font-family: inherit; }
 /* Apply the gooey threshold filter only while morphing.
    The filter snap is what creates the crisp dissolve from blurry pixels. */
 .projector-topic-stage.is-morphing {
+  --projector-topic-slide-distance: clamp(1.5rem, 3.2vw, 2.6rem);
   filter: none;
+}
+
+.projector-topic-stage.is-slide-morph {
+  padding-left: clamp(0.6rem, 1.25vw, 1.1rem);
+}
+
+.projector-topic-morph-shell {
+  position: relative;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .projector-topic-morph {
@@ -551,8 +563,25 @@ button, input { font-family: inherit; }
   overflow: hidden;
 }
 
-.projector-topic-morph.is-morphing {
-  filter: url(#topic-morph-threshold) blur(0.6px);
+.projector-topic-stage.is-gooey-morph .projector-topic-morph-shell.is-morphing {
+  overflow: hidden;
+  filter: none;
+  -webkit-filter: none;
+  pointer-events: none;
+}
+
+.projector-topic-stage.is-gooey-morph .projector-topic-morph.is-morphing {
+  overflow: hidden;
+  filter: url("#topic-morph-threshold") blur(0.6px);
+  -webkit-filter: url("#topic-morph-threshold") blur(0.6px);
+  pointer-events: none;
+}
+
+.projector-topic-morph-shell.is-slide-morph,
+.projector-topic-morph.is-slide-morph {
+  overflow: hidden;
+  filter: none;
+  -webkit-filter: none;
   pointer-events: none;
 }
 
@@ -585,6 +614,20 @@ button, input { font-family: inherit; }
 .projector-topic-morph.is-morphing .projector-topic-layer h2,
 .projector-topic-morph.is-morphing .projector-topic-layer li {
   will-change: filter, opacity;
+}
+
+.projector-topic-stage.is-slide-morph .projector-topic-layer {
+  will-change: transform, opacity;
+}
+
+.projector-topic-stage.is-slide-morph .projector-topic-layer--from {
+  animation: projector-topic-slide-out var(--topic-slide-duration, 560ms)
+    cubic-bezier(0.22, 0.78, 0.24, 1) both;
+}
+
+.projector-topic-stage.is-slide-morph .projector-topic-layer--to {
+  animation: projector-topic-slide-in var(--topic-slide-duration, 560ms)
+    cubic-bezier(0.18, 0.84, 0.28, 1) both;
 }
 
 /* Static (non-morphing) layer sits normally */
@@ -685,6 +728,18 @@ button, input { font-family: inherit; }
   white-space: nowrap;
   text-overflow: ellipsis;
   z-index: 1;
+}
+
+.projector-subtopic-measure {
+  position: absolute;
+  display: inline-block;
+  left: 0;
+  top: 0;
+  width: max-content;
+  max-width: none;
+  white-space: nowrap;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .projector-subtopic-viewport::before,
@@ -797,6 +852,32 @@ button, input { font-family: inherit; }
 @keyframes subtopic-jumbotron {
   from { transform: translateX(0); }
   to { transform: translateX(calc(-1 * var(--subtopic-pan-loop-distance, 0px))); }
+}
+
+@keyframes projector-topic-slide-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(
+      calc(-1 * var(--projector-topic-slide-direction, 1) * var(--projector-topic-slide-distance))
+    );
+  }
+}
+
+@keyframes projector-topic-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(
+      calc(var(--projector-topic-slide-direction, 1) * var(--projector-topic-slide-distance))
+    );
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Suppress CSS opacity transitions during morph — JS controls opacity directly */
@@ -1330,23 +1411,33 @@ button, input { font-family: inherit; }
   .projector-topic-stage {
     border-left: 0;
     border-top: 0;
-    padding-left: 0;
+    padding-left: 0.35rem;
     padding-top: 0.25rem;
     height: 100%;
     min-height: 0;
+  }
+
+  .projector-topic-stage.is-morphing {
+    --projector-topic-slide-distance: 1.3rem;
+  }
+
+  .projector-topic-stage.is-slide-morph {
+    padding-left: 0.35rem;
   }
 
   .projector-topic-stage::after {
     bottom: -3px;
   }
 
+  .projector-topic-morph-shell,
   .projector-topic-morph {
     height: 100%;
     min-height: 0;
   }
 
   .projector-topic-layer {
-    padding-top: 0.25rem;
+    padding: 0.25rem 0.35rem
+      calc(var(--projector-content-end-gap) + var(--projector-topic-scroll-end-gap)) 0.35rem;
   }
 
   .projector-topic-heading {
@@ -1382,6 +1473,14 @@ button, input { font-family: inherit; }
   /* No blur/filter during morph */
   .projector-topic-stage.is-morphing {
     filter: none;
+  }
+
+  .projector-topic-morph-shell.is-morphing,
+  .projector-topic-morph.is-morphing,
+  .projector-topic-morph-shell.is-slide-morph,
+  .projector-topic-morph.is-slide-morph {
+    filter: none;
+    -webkit-filter: none;
   }
 
   .projector-topic-morph.is-morphing .projector-topic-layer h2,

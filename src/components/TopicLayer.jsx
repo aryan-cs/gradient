@@ -44,6 +44,9 @@ function TopicLayer({
                   }}
                 >
                   <span className="projector-subtopic-viewport">
+                    <span className="projector-subtopic-measure" aria-hidden="true">
+                      {subtopic}
+                    </span>
                     <span className="projector-subtopic-track">
                       <span className="projector-subtopic-text projector-subtopic-text--primary">
                         {subtopic}
