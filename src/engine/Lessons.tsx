@@ -13,7 +13,7 @@ export const PROJECTOR_TOPICS = {
     {
       topic: "Intelligent Systems",
       subtopics: [
-        "What Is Machine Learning",
+        "What Really Is Machine Learning?",
         "AI vs ML vs Deep Learning",
         "Types of Learning Problems",
         "How Models Learn",

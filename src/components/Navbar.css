@@ -199,10 +199,14 @@ button, input { font-family: inherit; }
   padding: 0;
   background: var(--line);
   appearance: none;
-  cursor: pointer;
+  cursor: grab;
   transform-origin: top center;
   animation: rope-sway 2.6s ease-in-out infinite;
   will-change: transform;
+}
+
+.projector-rope:active {
+  cursor: grabbing;
 }
 
 .projector-pull {
